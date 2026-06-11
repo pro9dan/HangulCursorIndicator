@@ -11,6 +11,13 @@ public static class NativeMethods
     public const long WsExNoActivate = 0x08000000L;
 
     public const int WmImeControl = 0x0283;
+    public const int WmHotkey = 0x0312;
+    public const uint ModShift = 0x0004;
+    public const uint ModControl = 0x0002;
+    public const uint ModNoRepeat = 0x4000;
+    public const uint VkControl = 0x11;
+    public const uint VkShift = 0x10;
+    public const uint VkP = 0x50;
     public static readonly IntPtr ImcGetConversionMode = new(0x0001);
     public const int ImeCmodeNative = 0x0001;
 
@@ -93,6 +100,21 @@ public static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr SetFocus(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(uint vKey);
 
     [DllImport("user32.dll")]
     public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);

@@ -8,23 +8,52 @@ namespace HangulCursorIndicator;
 public class App : System.Windows.Application
 {
     private readonly ImeStatusService _imeStatusService = new();
+    private readonly ToastWindowManager _toastWindowManager = new();
     private BadgeWindow? _badgeWindow;
     private TrayIconService? _trayIconService;
+    private GlobalMessageHotkeyService? _messageHotkeyService;
+    private LanMessageService? _lanMessageService;
+    private MessageInputWindow? _messageInputWindow;
     private DispatcherTimer? _timer;
     private bool _badgeEnabled = true;
+    private bool _isOpeningMessageInput;
 
     [STAThread]
     public static void Main()
     {
+        AppLogger.Initialize();
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            if (args.ExceptionObject is Exception exception)
+            {
+                AppLogger.Error(exception, "Unhandled AppDomain exception");
+            }
+            else
+            {
+                AppLogger.Warn($"Unhandled AppDomain exception object: {args.ExceptionObject}");
+            }
+        };
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            AppLogger.Error(args.Exception, "Unobserved task exception");
+            args.SetObserved();
+        };
+
         NativeMethods.EnablePerMonitorDpiAwareness();
 
         var app = new App();
+        app.DispatcherUnhandledException += (_, args) =>
+        {
+            AppLogger.Error(args.Exception, "Unhandled dispatcher exception");
+            args.Handled = true;
+        };
         app.Run();
     }
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        AppLogger.Info("Application startup");
 
         _badgeWindow = new BadgeWindow();
         _badgeWindow.Show();
@@ -33,6 +62,20 @@ public class App : System.Windows.Application
             isBadgeEnabled: () => _badgeEnabled,
             setBadgeEnabled: SetBadgeEnabled,
             exit: Shutdown);
+
+        _lanMessageService = new LanMessageService();
+        _lanMessageService.MessageReceived += (_, message) =>
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                AppLogger.Info($"Showing received toast from {message.Sender}, length={message.Text.Length}");
+                _toastWindowManager.Show(message.Text, message.Sender);
+            });
+        };
+        _lanMessageService.Start();
+
+        _messageHotkeyService = new GlobalMessageHotkeyService(ShowMessageInput);
+        _messageHotkeyService.Start();
 
         _timer = new DispatcherTimer(DispatcherPriority.Render)
         {
@@ -46,7 +89,10 @@ public class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        AppLogger.Info("Application exit");
         _timer?.Stop();
+        _messageHotkeyService?.Dispose();
+        _lanMessageService?.Dispose();
         _trayIconService?.Dispose();
         base.OnExit(e);
     }
@@ -76,5 +122,42 @@ public class App : System.Windows.Application
         _badgeWindow.SetBadgeText(text);
         _badgeWindow.MoveNearCursor();
         _badgeWindow.ShowBadge();
+    }
+
+    private void ShowMessageInput()
+    {
+        AppLogger.Info("ShowMessageInput requested");
+        if (_isOpeningMessageInput)
+        {
+            AppLogger.Info("ShowMessageInput skipped while opening");
+            return;
+        }
+
+        if (_messageInputWindow is { IsVisible: true })
+        {
+            _messageInputWindow.Activate();
+            _messageInputWindow.FocusTextBox();
+            return;
+        }
+
+        _isOpeningMessageInput = true;
+        _messageInputWindow = new MessageInputWindow(text =>
+        {
+            if (_lanMessageService is null)
+            {
+                AppLogger.Warn("LanMessageService is null while sending message");
+                return;
+            }
+
+            AppLogger.Info($"Message submitted, length={text.Length}");
+            _ = _lanMessageService.SendAsync(text);
+        });
+        _messageInputWindow.Closed += (_, _) =>
+        {
+            AppLogger.Info("Message input closed");
+            _messageInputWindow = null;
+            _isOpeningMessageInput = false;
+        };
+        _messageInputWindow.ShowNearCursor();
     }
 }

@@ -33,6 +33,16 @@ public sealed class TrayIconService : IDisposable
             UpdateMenuState();
         };
 
+        var aboutItem = new ToolStripMenuItem("\uD504\uB85C\uADF8\uB7A8 \uC815\uBCF4");
+        aboutItem.Click += (_, _) =>
+        {
+            MessageBox.Show(
+                "\uAC1C\uBC1C\uC790: \uD55C\uC885\uD6C8\r\n\uC5F0\uB77D\uCC98: tomatoscent@gmail.com",
+                "\uD504\uB85C\uADF8\uB7A8 \uC815\uBCF4",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        };
+
         var exitItem = new ToolStripMenuItem("\uC885\uB8CC");
         exitItem.Click += (_, _) => _exit();
 
@@ -40,6 +50,8 @@ public sealed class TrayIconService : IDisposable
         menu.Opening += (_, _) => UpdateMenuState();
         menu.Items.Add(_toggleBadgeItem);
         menu.Items.Add(_autoStartItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(aboutItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exitItem);
 
