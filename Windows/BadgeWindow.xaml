@@ -1,0 +1,28 @@
+<Window x:Class="HangulCursorIndicator.Windows.BadgeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="36"
+        Height="28"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        IsHitTestVisible="False"
+        ShowActivated="False">
+    <Border x:Name="BadgeBorder"
+            Background="#CC202020"
+            CornerRadius="7"
+            SnapsToDevicePixels="True">
+        <TextBlock x:Name="BadgeText"
+                   Text="A"
+                   Foreground="White"
+                   FontFamily="Segoe UI, Malgun Gothic"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   TextAlignment="Center" />
+    </Border>
+</Window>
