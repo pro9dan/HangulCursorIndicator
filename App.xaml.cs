@@ -2,17 +2,20 @@ using System.Windows;
 using System.Windows.Threading;
 using HangulCursorIndicator.Services;
 using HangulCursorIndicator.Windows;
+using MessageBox = System.Windows.MessageBox;
 
 namespace HangulCursorIndicator;
 
 public class App : System.Windows.Application
 {
+    private static Mutex? _singleInstanceMutex;
     private readonly ImeStatusService _imeStatusService = new();
     private readonly ToastWindowManager _toastWindowManager = new();
     private BadgeWindow? _badgeWindow;
     private TrayIconService? _trayIconService;
     private GlobalMessageHotkeyService? _messageHotkeyService;
     private LanMessageService? _lanMessageService;
+    private SingleInstanceNotificationService? _singleInstanceNotificationService;
     private MessageInputWindow? _messageInputWindow;
     private DispatcherTimer? _timer;
     private bool _badgeEnabled = true;
@@ -39,6 +42,27 @@ public class App : System.Windows.Application
             args.SetObserved();
         };
 
+        _singleInstanceMutex = new Mutex(
+            initiallyOwned: true,
+            name: AppSettings.SingleInstanceMutexName,
+            createdNew: out var createdNew);
+
+        if (!createdNew)
+        {
+            AppLogger.Warn("Second instance launch blocked");
+            if (SingleInstanceNotificationService.NotifyExistingInstance())
+            {
+                AppLogger.Info("Existing instance notified");
+            }
+            else
+            {
+                AppLogger.Warn("Existing instance notification was not ready");
+            }
+
+            _singleInstanceMutex.Dispose();
+            return;
+        }
+
         NativeMethods.EnablePerMonitorDpiAwareness();
 
         var app = new App();
@@ -48,6 +72,9 @@ public class App : System.Windows.Application
             args.Handled = true;
         };
         app.Run();
+        _singleInstanceMutex?.ReleaseMutex();
+        _singleInstanceMutex?.Dispose();
+        _singleInstanceMutex = null;
     }
 
     protected override void OnStartup(StartupEventArgs e)
@@ -62,6 +89,19 @@ public class App : System.Windows.Application
             isBadgeEnabled: () => _badgeEnabled,
             setBadgeEnabled: SetBadgeEnabled,
             exit: Shutdown);
+
+        _singleInstanceNotificationService = new SingleInstanceNotificationService(() =>
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                AppLogger.Info("Showing already-running notification");
+                MessageBox.Show(
+                    "\uD504\uB85C\uADF8\uB7A8\uC774 \uC774\uBBF8 \uC2E4\uD589 \uC911\uC785\uB2C8\uB2E4.",
+                    "Hangul Cursor Indicator",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            });
+        });
 
         _lanMessageService = new LanMessageService();
         _lanMessageService.MessageReceived += (_, message) =>
@@ -93,6 +133,7 @@ public class App : System.Windows.Application
         _timer?.Stop();
         _messageHotkeyService?.Dispose();
         _lanMessageService?.Dispose();
+        _singleInstanceNotificationService?.Dispose();
         _trayIconService?.Dispose();
         base.OnExit(e);
     }

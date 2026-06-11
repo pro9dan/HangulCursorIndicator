@@ -102,9 +102,15 @@ public sealed class LanMessageService : IDisposable
 
                 if (packet is null ||
                     packet.App != AppName ||
-                    packet.InstanceId == _instanceId ||
                     string.IsNullOrWhiteSpace(packet.Text))
                 {
+                    continue;
+                }
+
+                if (packet.InstanceId == _instanceId ||
+                    string.Equals(packet.Sender, LocalSenderName, StringComparison.OrdinalIgnoreCase))
+                {
+                    AppLogger.Info("Ignored own UDP message");
                     continue;
                 }
 

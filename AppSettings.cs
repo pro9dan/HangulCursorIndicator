@@ -23,4 +23,6 @@ public static class AppSettings
     public const string HangulText = "\uD55C";
     public const string EnglishText = "A";
     public const string AutoStartRunName = "HangulCursorIndicator";
+    public const string SingleInstanceMutexName = @"Local\HangulCursorIndicator.SingleInstance";
+    public const string SingleInstanceNotifyEventName = @"Local\HangulCursorIndicator.ShowAlreadyRunning";
 }
