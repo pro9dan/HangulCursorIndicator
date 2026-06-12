@@ -17,27 +17,6 @@ public partial class ToastWindow : Window
         Loaded += (_, _) => BeginToastLifecycle();
     }
 
-    protected override void OnContentRendered(EventArgs e)
-    {
-        base.OnContentRendered(e);
-        MoveToScreenCenter();
-    }
-
-    private async void BeginToastLifecycle()
-    {
-        BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(140)));
-        await Task.Delay(AppSettings.ToastDuration);
-
-        var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(450));
-        fadeOut.Completed += (_, _) => Close();
-        BeginAnimation(OpacityProperty, fadeOut);
-    }
-
-    private void MoveToScreenCenter()
-    {
-        WindowPositionService.CenterOnCursorMonitor(this);
-    }
-
     private void ApplyWindowStyles()
     {
         var handle = new WindowInteropHelper(this).Handle;
@@ -52,5 +31,15 @@ public partial class ToastWindow : Window
         style |= NativeMethods.WsExLayered;
         style |= NativeMethods.WsExNoActivate;
         NativeMethods.SetWindowLongPtr(handle, NativeMethods.GwlExStyle, new IntPtr(style));
+    }
+
+    private async void BeginToastLifecycle()
+    {
+        BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(140)));
+        await Task.Delay(AppSettings.ToastDuration);
+
+        var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(450));
+        fadeOut.Completed += (_, _) => Close();
+        BeginAnimation(OpacityProperty, fadeOut);
     }
 }
